@@ -1173,7 +1173,13 @@
                 const textY = pos.y + adjustedOffset * unitY;
                 
                 // Úhel pro rotaci textu (ve směru od středu)
-                const textAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+                let textAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                // Na levé půlce kruhu (180° až 0°) otočit text o 180°, aby byl čitelný
+                // Levou půlku detekujeme jako úhel mezi 90° a -90° (nebo > 90° nebo < -90°)
+                if (Math.abs(textAngle) > 90) {
+                    textAngle += 180;
+                }
                 
                 // Vykreslit text
                 const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
