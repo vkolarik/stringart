@@ -1,0 +1,16 @@
+{
+  "name": "string-art-visualizer",
+  "version": "1.0.0",
+  "description": "String Art Visualizer - Webová aplikace pro vizualizaci string art postupů",
+  "scripts": {
+    "dev": "npx serve .",
+    "build": "echo 'No build step needed'"
+  },
+  "keywords": [
+    "string-art",
+    "visualization"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+

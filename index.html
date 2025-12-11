@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>String Art Vizualizace</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 1400px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 30px;
+        }
+
+        .visualization {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+        }
+
+        #canvas {
+            width: 100%;
+            height: 100%;
+            min-height: 600px;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .step-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .step-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .step-number {
+            font-size: 72px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .next-pin {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .next-pin-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-bottom: 8px;
+        }
+
+        .next-pin-number {
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .navigation {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .nav-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .nav-btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .steps-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .steps-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .step-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .step-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            transform: scale(1.05);
+            border-color: #5568d3;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            z-index: 10;
+            position: relative;
+        }
+
+        .step-item.future {
+            opacity: 0.6;
+        }
+
+        .step-item.past {
+            opacity: 0.7;
+        }
+
+        .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .step-number {
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.7;
+        }
+
+        .step-item.active .step-number {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .step-path {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .step-item.active .step-path {
+            font-size: 20px;
+        }
+
+        .step-pin {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-weight: 700;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .step-item:not(.active) .step-pin {
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .step-arrow {
+            font-size: 20px;
+            opacity: 0.8;
+        }
+
+        .step-item.active .step-arrow {
+            font-size: 24px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .file-upload {
+            text-align: center;
+            padding: 40px;
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            background: #e9ecef;
+            border-color: #5568d3;
+        }
+
+        .file-upload.drag-over {
+            background: #e7f3ff;
+            border-color: #667eea;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .file-upload-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .file-upload-hint {
+            font-size: 14px;
+            color: #666;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .angle-control {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+        }
+
+        .angle-control-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .angle-input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .angle-input {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            transition: border-color 0.3s;
+        }
+
+        .angle-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .angle-hint {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+
+        .show-result-btn, .show-template-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .show-result-btn:hover, .show-template-btn:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .show-result-btn:active, .show-template-btn:active {
+            transform: translateY(0);
+        }
+
+        .show-template-btn {
+            background: #17a2b8;
+            margin-top: 10px;
+        }
+
+        .show-template-btn:hover {
+            background: #138496;
+        }
+
+        .template-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .template-control-group {
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .template-control-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .template-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .template-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .template-export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .export-btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .export-btn.png {
+            background: #28a745;
+            color: white;
+        }
+
+        .export-btn.png:hover {
+            background: #218838;
+        }
+
+        .export-btn.svg {
+            background: #667eea;
+            color: white;
+        }
+
+        .export-btn.svg:hover {
+            background: #5568d3;
+        }
+
+        #templateCanvas {
+            width: 100%;
+            height: auto;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            max-height: 70vh;
+            overflow: auto;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 2% auto;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow: auto;
+            position: relative;
+            animation: slideDown 0.3s;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .close-modal {
+            background: #dc3545;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-modal:hover {
+            background: #c82333;
+            transform: rotate(90deg);
+        }
+
+        #resultCanvas {
+            width: 100%;
+            height: auto;
+            background: #f8f9fa;
+            border-radius: 15px;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 5% auto;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="visualization">
+            <div id="fileUpload" class="file-upload" onclick="document.getElementById('fileInput').click()">
+                <div class="file-upload-icon">📎</div>
+                <div class="file-upload-text">Klikni nebo přetáhni JSON soubor</div>
+                <div class="file-upload-hint">Vyber soubor postup.json</div>
+                <input type="file" id="fileInput" accept=".json" />
+            </div>
+            <div id="loading" class="loading" style="display: none;">Načítám data...</div>
+            <svg id="canvas" style="display: none;"></svg>
+        </div>
+        <div class="controls">
+            <div class="step-display">
+                <div class="step-label">Aktuální krok</div>
+                <div class="step-number" id="stepNumber">0</div>
+                <div class="next-pin">
+                    <div class="next-pin-label">Další pin</div>
+                    <div class="next-pin-number" id="nextPin">-</div>
+                </div>
+            </div>
+            
+            <div class="navigation">
+                <button class="nav-btn" id="prevBtn" onclick="previousStep()">← Předchozí</button>
+                <button class="nav-btn" id="nextBtn" onclick="nextStep()">Další →</button>
+            </div>
+
+            <div class="steps-section">
+                <div class="section-title">Kroky</div>
+                <div class="steps-list" id="stepsList"></div>
+            </div>
+
+            <div class="angle-control" id="angleControl" style="display: none;">
+                <div class="angle-control-label">Úhel prvního pinu</div>
+                <div class="angle-input-group">
+                    <input type="number" id="angleInput" class="angle-input" value="90" min="0" max="360" step="1" />
+                    <span style="font-size: 18px; color: #666;">°</span>
+                </div>
+                <div class="angle-hint">0° = 3h, 90° = 6h, 180° = 9h, 270° = 12h</div>
+            </div>
+
+            <button class="show-result-btn" id="showResultBtn" onclick="showFullResult()" style="display: none;">
+                🎨 Zobrazit celý výsledek
+            </button>
+
+            <button class="show-template-btn" id="showTemplateBtn" onclick="showTemplateModal()" style="display: none;">
+                📄 Generovat šablonu na tisk
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal pro zobrazení celého výsledku -->
+    <div id="resultModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Celý výsledek String Art</div>
+                <button class="close-modal" onclick="closeResultModal()">×</button>
+            </div>
+            <svg id="resultCanvas"></svg>
+        </div>
+    </div>
+
+    <!-- Modal pro generování šablony na tisk -->
+    <div id="templateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Šablona na tisk</div>
+                <button class="close-modal" onclick="closeTemplateModal()">×</button>
+            </div>
+            <div class="template-controls">
+                <div class="template-control-group">
+                    <div class="template-control-label">Šířka (px)</div>
+                    <input type="number" id="templateWidth" class="template-input" value="2000" min="500" max="10000" step="100" onchange="updateTemplate()" />
+                </div>
+                <div class="template-control-group">
+                    <div class="template-control-label">Výška (px)</div>
+                    <input type="number" id="templateHeight" class="template-input" value="2000" min="500" max="10000" step="100" onchange="updateTemplate()" />
+                </div>
+            </div>
+            <div id="templateContainer" style="text-align: center; margin-bottom: 15px;">
+                <svg id="templateCanvas"></svg>
+            </div>
+            <div class="template-export-buttons">
+                <button class="export-btn png" onclick="exportTemplatePNG()">📥 Exportovat PNG</button>
+                <button class="export-btn svg" onclick="exportTemplateSVG()">📥 Exportovat SVG</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let data = null;
+        let currentStep = 0;
+        let pins = 300;
+        let paths = [];
+        let pinPositions = [];
+        let svg = null;
+        let animationFrame = null;
+        let startAngle = 90; // Úhel prvního pinu ve stupních (90° = 3 hodiny)
+
+        // Načtení JSON ze souboru
+        function loadDataFromFile(file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    data = JSON.parse(e.target.result);
+                    pins = data.parameters.pins || data.metadata.parameters.pins || 300;
+                    paths = data.paths || [];
+                    
+                    if (paths.length === 0) {
+                        throw new Error('JSON neobsahuje žádné paths');
+                    }
+                    
+                    // Načíst úhel z localStorage nebo použít výchozí 90°
+                    const savedAngle = localStorage.getItem('stringArtStartAngle');
+                    if (savedAngle !== null) {
+                        startAngle = parseFloat(savedAngle);
+                        document.getElementById('angleInput').value = startAngle;
+                    }
+                    
+                    calculatePinPositions();
+                    initializeCanvas();
+                    updateDisplay();
+                    
+                    document.getElementById('fileUpload').style.display = 'none';
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('canvas').style.display = 'block';
+                    document.getElementById('showResultBtn').style.display = 'block';
+                    document.getElementById('showTemplateBtn').style.display = 'block';
+                    document.getElementById('angleControl').style.display = 'block';
+                } catch (error) {
+                    console.error('Chyba při načítání dat:', error);
+                    document.getElementById('loading').textContent = 'Chyba při načítání dat: ' + error.message;
+                    document.getElementById('loading').style.display = 'block';
+                    document.getElementById('fileUpload').style.display = 'none';
+                }
+            };
+            
+            reader.onerror = function() {
+                document.getElementById('loading').textContent = 'Chyba při čtení souboru';
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('fileUpload').style.display = 'none';
+            };
+            
+            document.getElementById('fileUpload').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            reader.readAsText(file);
+        }
+
+        // Výpočet pozic pinů v kruhu
+        function calculatePinPositions() {
+            pinPositions = [];
+            const centerX = 300;
+            const centerY = 300;
+            const radius = 250;
+            
+            for (let i = 0; i < pins; i++) {
+                const angle = (i * 360 / pins + startAngle) * (Math.PI / 180);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                pinPositions.push({ x, y });
+            }
+            
+            // Překreslit canvas, pokud už existuje
+            if (svg && paths.length > 0) {
+                updateCanvas();
+            }
+        }
+
+        // Inicializace SVG canvasu
+        function initializeCanvas() {
+            svg = document.getElementById('canvas');
+            svg.setAttribute('viewBox', '0 0 600 600');
+            svg.setAttribute('width', '100%');
+            svg.setAttribute('height', '100%');
+            
+            // Vykreslení pinů
+            pinPositions.forEach((pos, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', 3);
+                circle.setAttribute('fill', '#333');
+                circle.setAttribute('class', 'pin');
+                circle.setAttribute('data-pin', index);
+                svg.appendChild(circle);
+            });
+        }
+
+        // Aktualizace zobrazení
+        function updateDisplay() {
+            updateStepNumber();
+            updateNextPin();
+            updateSteps();
+            updateCanvas();
+            updateButtons();
+        }
+
+        function updateStepNumber() {
+            document.getElementById('stepNumber').textContent = currentStep;
+        }
+
+        function updateNextPin() {
+            if (currentStep < paths.length) {
+                const nextPath = paths[currentStep];
+                document.getElementById('nextPin').textContent = nextPath.to;
+            } else {
+                document.getElementById('nextPin').textContent = '-';
+            }
+        }
+
+        function updateSteps() {
+            const stepsList = document.getElementById('stepsList');
+            stepsList.innerHTML = '';
+            
+            if (paths.length === 0) {
+                stepsList.innerHTML = '<div style="color: #999; font-size: 14px; text-align: center; padding: 20px;">Žádné kroky</div>';
+                return;
+            }
+            
+            // Zobrazit 5 kroků: 2 před aktuálním, aktuální, 2 po aktuálním
+            // Prostřední krok (index 2) je aktuální
+            let displayStart = currentStep - 2;
+            
+            // Pokud jsme na začátku (< 2 kroky), zobrazit od 0
+            if (currentStep < 2) {
+                displayStart = 0;
+            }
+            
+            // Pokud jsme na konci, zobrazit posledních 5 kroků
+            if (currentStep >= paths.length - 2) {
+                displayStart = Math.max(0, paths.length - 5);
+            }
+            
+            // Zobrazit 5 kroků (nebo méně, pokud není dostatek)
+            for (let i = displayStart; i < displayStart + 5 && i < paths.length; i++) {
+                const path = paths[i];
+                const item = document.createElement('div');
+                
+                const isActive = i === currentStep;
+                const isPast = i < currentStep;
+                const isFuture = i > currentStep;
+                
+                let className = 'step-item';
+                if (isActive) {
+                    className += ' active';
+                } else if (isPast) {
+                    className += ' past';
+                } else if (isFuture) {
+                    className += ' future';
+                }
+                
+                item.className = className;
+                item.innerHTML = `
+                    <div class="step-header">
+                        <span class="step-number">Krok ${i + 1}</span>
+                    </div>
+                    <div class="step-path">
+                        <span class="step-pin">${path.from}</span>
+                        <span class="step-arrow">→</span>
+                        <span class="step-pin">${path.to}</span>
+                    </div>
+                `;
+                
+                // Přidat klikací funkci pro přechod na krok
+                if (!isActive) {
+                    item.style.cursor = 'pointer';
+                    item.addEventListener('click', () => {
+                        currentStep = i;
+                        updateDisplay();
+                    });
+                }
+                
+                stepsList.appendChild(item);
+            }
+            
+            // Plynule posunout na aktivní krok
+            setTimeout(() => {
+                const activeItem = stepsList.querySelector('.step-item.active');
+                if (activeItem) {
+                    activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 50);
+        }
+
+        function updateCanvas() {
+            // Odstranění všech line elementů (ne pinů)
+            const lines = svg.querySelectorAll('.line');
+            lines.forEach(line => line.remove());
+            
+            // Vykreslení historie (poslední 2 tahy)
+            const historyStart = Math.max(0, currentStep - 2);
+            for (let i = historyStart; i < currentStep; i++) {
+                drawLine(paths[i], 'history');
+            }
+            
+            // Vykreslení aktuálního tahu (pokud existuje)
+            if (currentStep < paths.length) {
+                drawLine(paths[currentStep], 'current');
+            }
+            
+            // Vykreslení náhledu (2 budoucí tahy)
+            const previewEnd = Math.min(paths.length, currentStep + 2);
+            for (let i = currentStep + 1; i < previewEnd; i++) {
+                drawLine(paths[i], 'preview');
+            }
+        }
+
+        function drawLine(path, type) {
+            const from = pinPositions[path.from];
+            const to = pinPositions[path.to];
+            
+            if (!from || !to) return;
+            
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', from.x);
+            line.setAttribute('y1', from.y);
+            line.setAttribute('x2', to.x);
+            line.setAttribute('y2', to.y);
+            line.setAttribute('class', `line line-${type}`);
+            
+            switch (type) {
+                case 'history':
+                    line.setAttribute('stroke', '#999');
+                    line.setAttribute('stroke-width', path.weight || 0.5);
+                    line.setAttribute('opacity', '0.3');
+                    break;
+                case 'current':
+                    line.setAttribute('stroke', '#667eea');
+                    line.setAttribute('stroke-width', (path.weight || 0.5) * 2);
+                    line.setAttribute('opacity', '0.8');
+                    line.setAttribute('stroke-dasharray', '5,5');
+                    // Animace
+                    animateLine(line, from, to);
+                    break;
+                case 'preview':
+                    line.setAttribute('stroke', '#28a745');
+                    line.setAttribute('stroke-width', path.weight || 0.5);
+                    line.setAttribute('opacity', '0.4');
+                    line.setAttribute('stroke-dasharray', '3,3');
+                    break;
+            }
+            
+            svg.appendChild(line);
+        }
+
+        function animateLine(line, from, to) {
+            if (animationFrame) {
+                cancelAnimationFrame(animationFrame);
+            }
+            
+            let progress = 0;
+            const duration = 1000; // 1 sekunda
+            const startTime = performance.now();
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                progress = Math.min(elapsed / duration, 1);
+                
+                // Easing funkce
+                const eased = 1 - Math.pow(1 - progress, 3);
+                
+                const currentX = from.x + (to.x - from.x) * eased;
+                const currentY = from.y + (to.y - from.y) * eased;
+                
+                line.setAttribute('x2', currentX);
+                line.setAttribute('y2', currentY);
+                
+                if (progress < 1) {
+                    animationFrame = requestAnimationFrame(animate);
+                } else {
+                    // Po dokončení animace zobrazit plnou čáru
+                    line.setAttribute('x2', to.x);
+                    line.setAttribute('y2', to.y);
+                    line.setAttribute('stroke-dasharray', 'none');
+                }
+            }
+            
+            animationFrame = requestAnimationFrame(animate);
+        }
+
+        function updateButtons() {
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep >= paths.length;
+        }
+
+        function nextStep() {
+            if (currentStep < paths.length) {
+                currentStep++;
+                updateDisplay();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                updateDisplay();
+            }
+        }
+
+        // Klávesové zkratky
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextStep();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                previousStep();
+            } else if (e.key === 'PageDown' || (e.key === 'ArrowDown' && e.shiftKey)) {
+                e.preventDefault();
+                // Přeskočit o 10 kroků dopředu
+                currentStep = Math.min(paths.length, currentStep + 10);
+                updateDisplay();
+            } else if (e.key === 'PageUp' || (e.key === 'ArrowUp' && e.shiftKey)) {
+                e.preventDefault();
+                // Přeskočit o 10 kroků zpět
+                currentStep = Math.max(0, currentStep - 10);
+                updateDisplay();
+            }
+        });
+
+        // File input handler
+        document.getElementById('fileInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadDataFromFile(file);
+            }
+        });
+
+        // Drag & drop handlers
+        const fileUpload = document.getElementById('fileUpload');
+        
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('drag-over');
+        });
+        
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('drag-over');
+        });
+        
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('drag-over');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.name.endsWith('.json')) {
+                loadDataFromFile(file);
+            } else {
+                alert('Prosím vyber JSON soubor');
+            }
+        });
+
+        // Funkce pro zobrazení celého výsledku
+        function showFullResult() {
+            const modal = document.getElementById('resultModal');
+            const resultCanvas = document.getElementById('resultCanvas');
+            
+            // Vymazat předchozí obsah
+            resultCanvas.innerHTML = '';
+            
+            // Nastavit viewBox
+            resultCanvas.setAttribute('viewBox', '0 0 600 600');
+            resultCanvas.setAttribute('width', '100%');
+            resultCanvas.setAttribute('height', 'auto');
+            
+            // Vypočítat pozice pinů pro modal (se stejným úhlem)
+            const centerX = 300;
+            const centerY = 300;
+            const radius = 250;
+            const modalPinPositions = [];
+            
+            for (let i = 0; i < pins; i++) {
+                const angle = (i * 360 / pins + startAngle) * (Math.PI / 180);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                modalPinPositions.push({ x, y });
+            }
+            
+            // Vykreslit všechny piny
+            modalPinPositions.forEach((pos, index) => {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', 2);
+                circle.setAttribute('fill', '#333');
+                resultCanvas.appendChild(circle);
+            });
+            
+            // Vykreslit všechny tahy
+            paths.forEach((path) => {
+                const from = modalPinPositions[path.from];
+                const to = modalPinPositions[path.to];
+                
+                if (!from || !to) return;
+                
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', from.x);
+                line.setAttribute('y1', from.y);
+                line.setAttribute('x2', to.x);
+                line.setAttribute('y2', to.y);
+                line.setAttribute('stroke', '#333');
+                line.setAttribute('stroke-width', path.weight || 0.5);
+                line.setAttribute('opacity', data.parameters?.lineOpacity || data.metadata?.parameters?.lineOpacity || 0.15);
+                resultCanvas.appendChild(line);
+            });
+            
+            // Zobrazit modal
+            modal.style.display = 'block';
+        }
+
+        // Funkce pro zavření modalu
+        function closeResultModal() {
+            document.getElementById('resultModal').style.display = 'none';
+        }
+
+        // Zavření modalu při kliknutí mimo něj
+        window.onclick = function(event) {
+            const resultModal = document.getElementById('resultModal');
+            const templateModal = document.getElementById('templateModal');
+            if (event.target === resultModal) {
+                closeResultModal();
+            }
+            if (event.target === templateModal) {
+                closeTemplateModal();
+            }
+        }
+
+        // Zavření modalu pomocí ESC
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeResultModal();
+                closeTemplateModal();
+            }
+        });
+
+        // Funkce pro detekci používaných pinů
+        function getUsedPins() {
+            const usedPins = new Set();
+            paths.forEach(path => {
+                usedPins.add(path.from);
+                usedPins.add(path.to);
+            });
+            return Array.from(usedPins).sort((a, b) => a - b);
+        }
+
+        // Funkce pro výpočet pozic pinů pro šablonu
+        function calculateTemplatePinPositions(width, height) {
+            const centerX = width / 2;
+            const centerY = height / 2;
+            const radius = Math.min(width, height) * 0.4; // 40% z menšího rozměru
+            const positions = [];
+            
+            for (let i = 0; i < pins; i++) {
+                const angle = (i * 360 / pins + startAngle) * (Math.PI / 180);
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+                positions.push({ x, y }); // Úhel se vypočítá později z pozice
+            }
+            
+            return { centerX, centerY, radius, positions };
+        }
+
+        // Funkce pro zobrazení modalu šablony
+        function showTemplateModal() {
+            const modal = document.getElementById('templateModal');
+            modal.style.display = 'block';
+            updateTemplate();
+        }
+
+        // Funkce pro zavření modalu šablony
+        function closeTemplateModal() {
+            document.getElementById('templateModal').style.display = 'none';
+        }
+
+        // Funkce pro aktualizaci šablony
+        function updateTemplate() {
+            const templateCanvas = document.getElementById('templateCanvas');
+            const width = parseInt(document.getElementById('templateWidth').value) || 2000;
+            const height = parseInt(document.getElementById('templateHeight').value) || 2000;
+            
+            templateCanvas.innerHTML = '';
+            templateCanvas.setAttribute('width', width);
+            templateCanvas.setAttribute('height', height);
+            templateCanvas.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            
+            const usedPins = getUsedPins();
+            const { centerX, centerY, radius, positions } = calculateTemplatePinPositions(width, height);
+            
+            // Vykreslit pouze používané piny
+            const pinRadius = Math.max(2, width / 500); // Velikost tečky podle rozlišení
+            // Dynamická velikost písma - co nejmenší, ale čitelná (závisí na rozlišení)
+            const fontSize = Math.max(10, Math.min(14, Math.sqrt(width * height) / 150));
+            // Offset je jen poloměr tečky + malinko pro čitelnost
+            const labelOffset = pinRadius + fontSize * 0.3; // Minimální offset - jen aby text nebyl přes pin
+            
+            // Funkce pro formátování čísla pinu
+            function formatPinNumber(pinIndex) {
+                if (pinIndex === 0) {
+                    // První pin - zobrazit jako 00
+                    return '00';
+                } else if (pinIndex % 10 === 0) {
+                    // Každé desáté číslo - zobrazit celé
+                    return pinIndex.toString();
+                } else {
+                    // Jinak jen poslední číslici (1-9)
+                    return (pinIndex % 10).toString();
+                }
+            }
+            
+            usedPins.forEach(pinIndex => {
+                const pos = positions[pinIndex];
+                if (!pos) return;
+                
+                // Vykreslit pin (tečku)
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', pinRadius);
+                circle.setAttribute('fill', '#000');
+                templateCanvas.appendChild(circle);
+                
+                // Vypočítat směr od středu k pinu
+                const dx = pos.x - centerX;
+                const dy = pos.y - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const unitX = dx / distance;
+                const unitY = dy / distance;
+                
+                // Formátovat číslo pinu
+                const pinLabel = formatPinNumber(pinIndex);
+                
+                // Odhadnout šířku textu (přibližně: počet znaků * 0.6 * fontSize)
+                // Pro text-anchor: middle potřebujeme polovinu šířky
+                const estimatedTextWidth = pinLabel.length * fontSize * 0.6;
+                const halfTextWidth = estimatedTextWidth / 2;
+                
+                // Offset se počítá od okraje textu (ne od středu)
+                // Základní offset + polovina šířky textu, aby se okraj textu nedotýkal pinu
+                const adjustedOffset = labelOffset + halfTextWidth;
+                
+                // Pozice pro text (co nejblíže pinu, ve směru od středu)
+                const textX = pos.x + adjustedOffset * unitX;
+                const textY = pos.y + adjustedOffset * unitY;
+                
+                // Úhel pro rotaci textu (ve směru od středu)
+                const textAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                // Vykreslit text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', textX);
+                text.setAttribute('y', textY);
+                text.setAttribute('font-size', fontSize);
+                text.setAttribute('font-family', 'Arial, sans-serif');
+                text.setAttribute('font-weight', '600');
+                text.setAttribute('fill', '#000');
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('dominant-baseline', 'middle');
+                
+                // Rotace textu ve směru od středu (okvětní lístky)
+                text.setAttribute('transform', `rotate(${textAngle} ${textX} ${textY})`);
+                
+                text.textContent = pinLabel;
+                templateCanvas.appendChild(text);
+            });
+        }
+
+        // Funkce pro export do PNG
+        function exportTemplatePNG() {
+            const templateCanvas = document.getElementById('templateCanvas');
+            const width = parseInt(document.getElementById('templateWidth').value) || 2000;
+            const height = parseInt(document.getElementById('templateHeight').value) || 2000;
+            
+            // Vytvořit canvas pro renderování
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            
+            // Bílé pozadí
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Vykreslit SVG na canvas
+            const svgData = new XMLSerializer().serializeToString(templateCanvas);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            const img = new Image();
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                
+                // Stáhnout PNG
+                canvas.toBlob(function(blob) {
+                    const link = document.createElement('a');
+                    link.download = 'string-art-template.png';
+                    link.href = URL.createObjectURL(blob);
+                    link.click();
+                    URL.revokeObjectURL(link.href);
+                });
+            };
+            img.src = url;
+        }
+
+        // Funkce pro export do SVG
+        function exportTemplateSVG() {
+            const templateCanvas = document.getElementById('templateCanvas');
+            const svgData = new XMLSerializer().serializeToString(templateCanvas);
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            const link = document.createElement('a');
+            link.download = 'string-art-template.svg';
+            link.href = url;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Event listener pro změnu úhlu
+        document.getElementById('angleInput').addEventListener('input', (e) => {
+            const newAngle = parseFloat(e.target.value);
+            if (!isNaN(newAngle) && newAngle >= 0 && newAngle <= 360) {
+                startAngle = newAngle;
+                localStorage.setItem('stringArtStartAngle', newAngle.toString());
+                calculatePinPositions();
+                // Překreslit piny na canvasu
+                if (svg) {
+                    const existingPins = svg.querySelectorAll('.pin');
+                    existingPins.forEach(pin => pin.remove());
+                    
+                    pinPositions.forEach((pos, index) => {
+                        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        circle.setAttribute('cx', pos.x);
+                        circle.setAttribute('cy', pos.y);
+                        circle.setAttribute('r', 3);
+                        circle.setAttribute('fill', '#333');
+                        circle.setAttribute('class', 'pin');
+                        circle.setAttribute('data-pin', index);
+                        svg.appendChild(circle);
+                    });
+                    
+                    updateCanvas();
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+
